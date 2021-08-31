@@ -101,6 +101,7 @@ def gls_ramp_fit(ramp_data, buffsize, save_opt, readnoise_2d, gain_2d, max_cores
     gls_opt_info: tuple
         Tuple of optional product ndarrays computed for GLS ramp fitting.
     """
+    # GLS_RAMP_FIT
     number_slices = utils.compute_slices(max_cores)
 
     log.info(f"Number of data slices: {number_slices}")
@@ -143,6 +144,7 @@ def gls_ramp_fit(ramp_data, buffsize, save_opt, readnoise_2d, gain_2d, max_cores
 
     log.debug(f"The execution time in seconds: {tstop - tstart:,}")
 
+    # TODO make sure these are the same size tuples as in OLS.
     return image_info, integ_info, gls_opt_info
 
 
@@ -337,7 +339,7 @@ def reassemble_opt(ramp_data, opt_res, opt_slice, crow, nrows):
     inter, err, pedestal, ampl, ampl_err = opt_slice
     # srow, erow = crow, crow + nrows
 
-    log.debug(f"    ---> ({crow}, {crow + nrows})")
+    # log.debug(f"    ---> ({crow}, {crow + nrows})")
     log.debug(f"inter    = {inter.shape}")
     log.debug(f"err      = {err.shape}")
     log.debug(f"pedestal = {pedestal.shape}")
@@ -521,7 +523,7 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
     gls_opt_info: tuple
         Tuple of the ndarrays computed for the optional results product.
     """
-    # START
+    # GLS_FIT_SINGLE
     # For multiprocessing, a new process requires the DQ flags to be updated,
     # since they are global variables.
     constants.update_dqflags_from_ramp_data(ramp_data)
@@ -549,7 +551,6 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
     slope_int, slope_err_int, dq_int, temp_dq, slopes, sum_weight = \
         create_integration_arrays(data_sect.shape)
 
-    # REFAC
     (intercept_int, intercept_err_int, pedestal_int, first_group, shape_ampl,
         ampl_int, ampl_err_int) = create_opt_res(save_opt, data_sect.shape, max_num_cr)
 
@@ -591,6 +592,7 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
         s_mask = (gdq_cube[0] == saturated_flag)
         if s_mask.any():
             # TODO The dimensions of s_mask are larger than temp_dq
+            #      def test_two_groups_fit():
             temp_dq[:, :][s_mask] = constants.dqflags["UNRELIABLE_SLOPE"]
         slope_err_int[num_int, :, :] = np.sqrt(slope_var_sect)
 
@@ -598,7 +600,7 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
         # Accumulate sum of slopes and sum of weights.
         if number_ints > 1:
             weight = 1. / slope_var_sect
-            slopes[:, :] += (slope_sect * weight)
+            slopes[:, :] += (slope_sect * weight)  # TODO is this right?
             sum_weight[:, :] += weight
 
         if save_opt:
@@ -635,6 +637,8 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
 
     slope_err_int /= gain_2d
     if number_ints > 1:
+        # TODO Why not use the slope_int here?  Isn't slope_int the computed
+        #      slope for each integration?
         slopes /= gain_2d
         gls_err /= gain_2d
     if save_opt:
@@ -682,6 +686,7 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
 
     # Create new model...
     if number_ints > 1:
+        # TODO - Why not use slope_ints, instead of slopes?
         image_info = (slopes.astype(np.float32), final_pixeldq, gls_err.astype(np.float32))
     else:
         image_info = (slope_int[0], final_pixeldq, slope_err_int[0])
@@ -710,7 +715,6 @@ def create_integration_arrays(dims):
     return slope_int, slope_err_int, dq_int, temp_dq, slopes, sum_weight
 
 
-# REFAC
 def create_opt_res(save_opt, dims, max_num_cr):
     """
     Parameter
@@ -756,7 +760,8 @@ def determine_slope(data_sect, input_var_sect,
                     gdq_sect, readnoise_sect, gain_sect,
                     frame_time, group_time, nframes_used,
                     max_num_cr, saturated_flag, jump_flag):
-    """Iteratively fit a slope, intercept, and cosmic rays to a ramp.
+    """
+    Iteratively fit a slope, intercept, and cosmic rays to a ramp.
 
     This function fits a ramp, possibly with discontinuities (cosmic-ray
     hits), to a 3-D data "cube" with shape (number of groups, number of
@@ -902,6 +907,7 @@ def determine_slope(data_sect, input_var_sect,
         cr_var_sect : 3-D ndarray, shape (ny, nx, cr_dimen)
             The variance of each cosmic-ray amplitude.
     """
+    # DETERMINE_SLOPE
 
     slope_diff_cutoff = 1.e-5
 
@@ -921,6 +927,7 @@ def determine_slope(data_sect, input_var_sect,
         temp_use_extra_terms = False
 
     while not done:
+        # HERE
         (intercept_sect, int_var_sect, slope_sect,
          slope_var_sect, cr_sect, cr_var_sect) = compute_slope(
              data_sect, input_var_sect, gdq_sect, readnoise_sect, gain_sect,
@@ -991,6 +998,7 @@ def evaluate_fit(
         This is the same shape as data_sect, and if the fit is good,
         fit_model and data_sect should not differ by much.
     """
+    # EVALUATE_FIT
 
     shape_3d = gdq_sect.shape           # the ramp, (ngroups, ny, nx)
     ngroups = gdq_sect.shape[0]
@@ -1061,7 +1069,8 @@ def compute_slope(
         data_sect, input_var_sect, gdq_sect, readnoise_sect, gain_sect,
         prev_fit, prev_slope_sect, frame_time, group_time, nframes_used,
         max_num_cr, saturated_flag, jump_flag, use_extra_terms):
-    """Set up the call to fit a slope to ramp data.
+    """
+    Set up the call to fit a slope to ramp data.
 
     This loops over the number of cosmic rays (jumps).  That is, all the
     ramps with no cosmic rays are processed first, then all the ramps with
@@ -1141,6 +1150,7 @@ def compute_slope(
         cr_var_sect is a 3-D ndarray, the variance of each cosmic ray
         amplitude.
     """
+    # COMPUTE_SLOPE
 
     cr_flagged = np.empty(data_sect.shape, dtype=np.uint8)
     cr_flagged[:] = np.where(np.bitwise_and(gdq_sect, jump_flag), 1, 0)
@@ -1270,7 +1280,8 @@ def compute_slope(
 
 def gls_fit(ramp_data, prev_fit_data, prev_slope_data, readnoise, gain, frame_time,
             group_time, nframes_used, num_cr, cr_flagged_2d, saturated_data):
-    """Generalized least squares linear fit.
+    """
+    Generalized least squares linear fit.
 
     It is assumed that every input pixel has num_cr cosmic-ray hits
     somewhere within the ramp.  This function should be called separately
@@ -1346,6 +1357,7 @@ def gls_fit(ramp_data, prev_fit_data, prev_slope_data, readnoise, gain, frame_ti
         The variance for the intercept, slope, and for the amplitude of
         each cosmic ray that was detected.
     """
+    # GLS_FIT
 
     M = float(nframes_used)
 
@@ -1364,16 +1376,16 @@ def gls_fit(ramp_data, prev_fit_data, prev_slope_data, readnoise, gain, frame_ti
     # corresponds to the value in cr_flagged_2d being 1.
     x = np.zeros((nz, ngroups, 2 + num_cr), dtype=np.float64)
     x[:, :, 0] = 1.
-    x[:, :, 1] = np.arange(ngroups, dtype=np.float64) * group_time + \
-        frame_time * (M + 1.) / 2.
+    x[:, :, 1] = np.arange(ngroups, dtype=np.float64) * group_time \
+                 + frame_time * (M + 1.) / 2.
 
     if num_cr > 0:
         sum_crs = cr_flagged_2d.cumsum(axis=0)
         for k in range(ngroups):
             s = slice(k, ngroups)
             for n in range(1, num_cr + 1):
-                temp = np.where(np.logical_and(cr_flagged_2d[k] == 1,
-                                               sum_crs[k] == n))
+                temp = np.where(
+                    np.logical_and(cr_flagged_2d[k] == 1, sum_crs[k] == n))
                 if len(temp[0]) > 0:
                     index = (temp[0], s, n + 1)
                     x[index] = 1
@@ -1394,10 +1406,13 @@ def gls_fit(ramp_data, prev_fit_data, prev_slope_data, readnoise, gain, frame_ti
     for k in range(ngroups):
         # Populate the upper right, row by row.
         ramp_cov[:, k, k:ngroups] = prev_fit_T[:, k:k + 1]
+
         # Populate the lower left, column by column.
         ramp_cov[:, k:ngroups, k] = prev_fit_T[:, k:k + 1]
+
         # Give saturated pixels a very high high variance (hence a low weight)
         ramp_cov[:, k, k] += saturated_data[k, :]
+
     del prev_fit_T
 
     # iden is 2-D, but it can broadcast to 4-D.  This is used to add terms to
