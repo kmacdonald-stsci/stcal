@@ -608,12 +608,11 @@ def test_four_groups_two_CRs_at_end():
     np.testing.assert_allclose(ans, check, tol)
 
 
-@pytest.mark.skip(reason="GLS code does not [yet] handle all groups as jump.")
 def test_four_groups_four_CRs():
     """
 
     """
-    nints, ngroups, nrows, ncols = 1, 10, 103, 102
+    nints, ngroups, nrows, ncols = 1, 4, 103, 102
     dims = (nints, ngroups, nrows, ncols)
     rnoise, gain = 10, 1
     group_time, frame_time = 1.0, 1
@@ -639,8 +638,6 @@ def test_four_groups_four_CRs():
     ans = slopes[0][50, 50]
     check = 0
     tol = 1.e-6
-    # print(f"ans = {ans}")
-    # print(f"check = {check}")
     np.testing.assert_allclose(ans, check, tol)
 
 

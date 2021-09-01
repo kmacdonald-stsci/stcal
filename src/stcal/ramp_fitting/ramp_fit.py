@@ -150,8 +150,8 @@ def ramp_fit_data(ramp_data, buffsize, save_opt, readnoise_2d, gain_2d,
     """
     This function begins the ramp fit computation after the creation of the
     RampData class.  It determines the proper path for computation to take
-    depending on the choice of ramp fitting algorithms (which is only ordinary
-    least squares right now) and the choice of single or muliprocessing.
+    depending on the choice of ramp fitting algorithms and the choice of single
+    or muliprocessing.
 
 
     ramp_data : RampData

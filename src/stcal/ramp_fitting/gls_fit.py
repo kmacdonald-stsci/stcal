@@ -151,6 +151,10 @@ def gls_ramp_fit(ramp_data, buffsize, save_opt, readnoise_2d, gain_2d, max_cores
 def gls_fit_multi(
         ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt, number_slices):
     """
+    This function slices the data with each slice being run on a separate
+    process.  Once the results have been returned from the multiprocessing pool
+    the final results products are reassembled from each result slice.
+
     ramp_data: RampClass
         The data needed to do ramp fitting.
 
@@ -219,6 +223,9 @@ def assemble_pool_results(ramp_data, save_opt, pool_results, rows_per_slice):
 def create_outputs(ramp_data):
     """
     Create the output arrays needed for multiprocessing reassembly.
+
+    ramp_data: RampClass
+        The original data used to do ramp fitting.
     """
     image_info = create_output_image(ramp_data)
     integ_info = create_output_integ(ramp_data)
@@ -229,6 +236,8 @@ def create_outputs(ramp_data):
 
 def create_output_image(ramp_data):
     """
+    Create the image output arrays needed for multiprocessing reassembly.
+
     ramp_data: RampClass
         The original data used to do ramp fitting.
     """
@@ -244,6 +253,8 @@ def create_output_image(ramp_data):
 
 def create_output_integ(ramp_data):
     """
+    Create the integration output arrays needed for multiprocessing reassembly.
+
     ramp_data: RampClass
         The original data used to do ramp fitting.
     """
@@ -259,6 +270,8 @@ def create_output_integ(ramp_data):
 
 def create_output_opt_res(ramp_data):
     """
+    Create the optional results output arrays needed for multiprocessing reassembly.
+
     ramp_data: RampClass
         The original data used to do ramp fitting.
     """
@@ -561,11 +574,11 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
 
         # We'll propagate error estimates from previous steps to the
         # current step by using the variance.
-        # TODO Should this really be done every loop?
+        # TODO Should this really be done every loop? Definitely move.
         input_var_sect = input_var_sect ** 2
 
         # Convert the data section from DN to electrons.
-        # TODO Should this really be done every loop?
+        # TODO Should this really be done every loop? Definitely move.
         data_sect *= gain_2d
         if save_opt:
             first_group[:, :] = data_sect[num_int, 0, :, :].copy()
@@ -696,6 +709,8 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
 
 def create_integration_arrays(dims):
     """
+    Create the final integration arrays.
+
     Parameter
     ---------
     dims: tuple
@@ -717,6 +732,8 @@ def create_integration_arrays(dims):
 
 def create_opt_res(save_opt, dims, max_num_cr):
     """
+    Create the final optional results product arrays.
+
     Parameter
     ---------
     dims: tuple
@@ -1256,6 +1273,11 @@ def compute_slope(
         result, variances = gls_fit(
             ramp_data, prev_fit_data, prev_slope_data, readnoise, gain, frame_time,
             group_time, nframes_used, num_cr, cr_flagged_2d, saturated_data)
+
+        print("-" * 80)
+        print(f"result = \n{result}")
+        print(f"variances = \n{variances}")
+        print("-" * 80)
 
         # Copy the intercept, slope, and cosmic-ray amplitudes and their
         # variances to the arrays to be returned.
