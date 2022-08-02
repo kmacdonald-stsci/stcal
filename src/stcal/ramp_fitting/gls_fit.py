@@ -916,8 +916,7 @@ def determine_slope(
     if ngroups == 1:
         return determine_slope_one_group(
             ramp_data, data_sect, input_var_sect, gdq_sect, readnoise_sect,
-            gain_sect, frame_time, group_time, nframes_used, max_num_cr,
-            saturated_flag, jump_flag, med_rates)
+            gain_sect, max_num_cr, med_rates)
 
     slope_diff_cutoff = 1.e-5
 
@@ -974,8 +973,7 @@ def determine_slope(
 
 def determine_slope_one_group(
         ramp_data, data_sect, input_var_sect, gdq_sect, readnoise_sect, gain_sect,
-        frame_time, group_time, nframes_used, max_num_cr, saturated_flag,
-        jump_flag, med_rates):
+        max_num_cr, med_rates):
     """
     The special case where an integration has only one group.
 
@@ -1057,6 +1055,11 @@ def determine_slope_one_group(
         cr_var_sect : 3-D ndarray, shape (ny, nx, cr_dimen)
             The variance of each cosmic-ray amplitude.
     """
+    frame_time = ramp_data.frame_time
+    group_time = ramp_data.group_time
+    nframes_used = ramp_data.nframes
+    saturated_flag = ramp_data.flags_saturated
+    jump_flag = ramp_data.flags_jump_det
     ngroups, nrows, ncols = data_sect.shape
 
     imshape = (nrows, ncols)
