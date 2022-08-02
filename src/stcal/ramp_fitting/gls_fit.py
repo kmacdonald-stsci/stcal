@@ -565,10 +565,8 @@ def gls_fit_single(ramp_data, gain_2d, readnoise_2d, max_num_cr, save_opt):
 
         (intercept_sect, intercept_var_sect, slope_sect,
          slope_var_sect, cr_sect, cr_var_sect) = determine_slope(
-             ramp_data,
-             data_cube, input_var_sect, gdq_cube,
-             readnoise_2d, gain_2d, frame_time, group_time,
-             nframes_used, max_num_cr, saturated_flag, jump_flag, med_rates)
+             ramp_data, data_cube, input_var_sect, gdq_cube,
+             readnoise_2d, gain_2d, max_num_cr, med_rates)
 
         slope_int[num_int, :, :] = slope_sect.copy()
         v_mask = (slope_var_sect <= 0.)
@@ -750,8 +748,7 @@ def create_opt_res(save_opt, dims, max_num_cr):
 
 def determine_slope(
         ramp_data, data_sect, input_var_sect, gdq_sect, readnoise_sect, gain_sect,
-        frame_time, group_time, nframes_used, max_num_cr, saturated_flag,
-        jump_flag, med_rates):
+        max_num_cr, med_rates):
     """Iteratively fit a slope, intercept, and cosmic rays to a ramp.
 
     This function fits a ramp, possibly with discontinuities (cosmic-ray
@@ -909,6 +906,12 @@ def determine_slope(
         cr_var_sect : 3-D ndarray, shape (ny, nx, cr_dimen)
             The variance of each cosmic-ray amplitude.
     """
+    frame_time = ramp_data.frame_time
+    group_time = ramp_data.group_time
+    nframes_used = ramp_data.nframes
+    saturated_flag = ramp_data.flags_saturated
+    jump_flag = ramp_data.flags_jump_det
+
     ngroups, nrows, ncols = data_sect.shape
     if ngroups == 1:
         return determine_slope_one_group(
