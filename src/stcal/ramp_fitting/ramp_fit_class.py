@@ -176,3 +176,4 @@ class RampData:
         print(f"pixeldq : {self.pixeldq}")
 
         self.dbg_print_meta()
+        print("-" * 80)
