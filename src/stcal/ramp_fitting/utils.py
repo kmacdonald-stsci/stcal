@@ -505,13 +505,13 @@ def calc_slope_vars(ramp_data, rn_sect, gain_sect, gdq_sect, group_time, max_seg
         lengths of segments for all pixels in the given data section and
         integration, 3-D int
     """
-    (nreads, asize2, asize1) = gdq_sect.shape
-    npix = asize1 * asize2
-    imshape = (asize2, asize1)
+    (ngroups, nrows, ncols) = gdq_sect.shape
+    npix = nrows * ncols
+    imshape = (nrows, ncols)
 
     # Create integration-specific sections of input arrays for determination
     #   of the variances.
-    gdq_2d = gdq_sect[:, :, :].reshape((nreads, npix))
+    gdq_2d = gdq_sect[:, :, :].reshape((ngroups, npix))
     gain_1d = gain_sect.reshape(npix)
     gdq_2d_nan = gdq_2d.copy()  # group dq with SATS will be replaced by nans
     gdq_2d_nan = gdq_2d_nan.astype(np.float32)
@@ -526,10 +526,10 @@ def calc_slope_vars(ramp_data, rn_sect, gain_sect, gdq_sect, group_time, max_seg
     sr_index = np.zeros(npix, dtype=np.uint8)
     pix_not_done = np.ones(npix, dtype=bool)  # initialize to True
 
-    i_read = 0
+    group = 0
     # Loop over reads for all pixels to get segments (segments per pixel)
-    while i_read < nreads and np.any(pix_not_done):
-        gdq_1d = gdq_2d_nan[i_read, :]
+    while group < ngroups and np.any(pix_not_done):
+        gdq_1d = gdq_2d_nan[group, :]
         wh_good = np.where(gdq_1d == 0)  # good groups
 
         # if this group is good, increment those pixels' segments' lengths
@@ -540,23 +540,23 @@ def calc_slope_vars(ramp_data, rn_sect, gain_sect, gdq_sect, group_time, max_seg
         # Locate any CRs that appear before the first SAT group...
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "invalid value.*", RuntimeWarning)
-            wh_cr = np.where(gdq_2d_nan[i_read, :].astype(np.int32) & ramp_data.flags_jump_det > 0)
+            wh_cr = np.where(gdq_2d_nan[group, :].astype(np.int32) & ramp_data.flags_jump_det > 0)
 
         # ... but not on final read:
-        if len(wh_cr[0]) > 0 and (i_read < nreads - 1):
+        if len(wh_cr[0]) > 0 and (group < ngroups - 1):
             sr_index[wh_cr[0]] += 1
             segs[sr_index[wh_cr], wh_cr] += 1
 
         del wh_cr
 
         # If current group is a NaN, this pixel is done (pix_not_done is False)
-        wh_nan = np.where(np.isnan(gdq_2d_nan[i_read, :]))
+        wh_nan = np.where(np.isnan(gdq_2d_nan[group, :]))
         if len(wh_nan[0]) > 0:
             pix_not_done[wh_nan[0]] = False
 
         del wh_nan
 
-        i_read += 1
+        group += 1
 
     segs = segs.astype(np.uint8)
     segs_beg = segs[:max_seg, :]  # the leading nonzero lengths
@@ -1038,6 +1038,61 @@ def reset_bad_gain(ramp_data, pdq, gain):
 
 def remove_bad_singles(segs_beg_3):
     """
+    For the current integration and data section, there may be segments of length
+    1 or zero that need to be removed from the segment list.  If there are segments
+    with length greater than 1, all segments of length 1 are removed.  If the longest
+    segment is of length 1, then all segments, except for the first, are removed.  By
+    construction, it is possible for the segment list to have segments of zero length,
+    which would be computed due to multiple DO_NOT_USE flags encountered.  This could
+    happen due to the CHARGELOSS flag occurring in the middle of a ramp.  This flag
+    also causes the DO_NOT_USE flag to be used as well.
+
+    Parameters
+    ----------
+    segs_beg_3 : ndarray
+        lengths of all segments for all ramps in the given data section and
+        integration; some of these ramps may contain segments having a single
+        group or zero groups, and another segment, 3-D int
+
+    Returns
+    -------
+    segs_beg_3 : ndarray
+        lengths of all segments for all ramps in the given data section and
+        integration; segments having a single group, and another segment
+        will be removed, 3-D int
+    """
+    # XXX - Probably a more performance way to do this.
+    max_seg, nrows, ncols = segs_beg_3.shape
+    if max_seg < 2:
+        return segs_beg_3
+    for row in range(nrows):
+        for col in range(ncols):
+            segs = segs_beg_3[:, row, col]
+            seg_max = segs.max()
+            if seg_max == 1:
+                new_segs = [1] + [0] * (max_seg-1)
+                segs_beg_3[:, row, col] = np.array(new_segs, dtype=segs_beg_3.dtype)
+                continue
+            seg_idx = 0
+            # Check all, but last segment
+            for k in range(len(segs)-1):
+                if segs[seg_idx] == 0 or segs[seg_idx] == 1:
+                    segs[seg_idx:-1] = segs[seg_idx+1:]
+                    segs[-1] = 0
+                    if segs[seg_idx+1:].max() == 0:
+                        break
+                else:
+                    seg_idx = seg_idx + 1
+
+            # Check last segment
+            if segs[-1] == 1:
+                segs[-1] = 0
+
+    return segs_beg_3
+
+
+def remove_bad_singles_old(segs_beg_3):
+    """
     For the current integration and data section, remove all segments having only
     a single group if there are other segments in the ramp.  This method allows
     for the possibility that a ramp can have multiple (necessarily consecutive)
@@ -1491,6 +1546,7 @@ def compute_median_rates(ramp_data):
         # Reset all saturated groups in the input data array to NaN
         # data_sect[np.bitwise_and(gdq_sect, ramp_data.flags_saturated).astype(bool)] = np.nan
         invalid_flags = ramp_data.flags_saturated | ramp_data.flags_do_not_use
+        invalid_locs = np.bitwise_and(gdq_sect, invalid_flags).astype(bool)
         data_sect[np.bitwise_and(gdq_sect, invalid_flags).astype(bool)] = np.nan
         data_sect = data_sect / group_time
 
