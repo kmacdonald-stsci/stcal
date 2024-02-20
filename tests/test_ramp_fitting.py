@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 
 from stcal.ramp_fitting.ramp_fit import ramp_fit_data
@@ -16,6 +17,7 @@ dqflags = {
     "DO_NOT_USE": 2**0,  # Bad pixel. Do not use.
     "SATURATED": 2**1,  # Pixel saturated during exposure.
     "JUMP_DET": 2**2,  # Jump detected during exposure.
+    "CHARGELOSS": 2**7,  # Jump detected during exposure.
     "NO_GAIN_VALUE": 2**19,  # Gain cannot be measured.
     "UNRELIABLE_SLOPE": 2**24,  # Slope variance large (i.e., noisy pixel).
 }
@@ -24,7 +26,7 @@ GOOD = dqflags["GOOD"]
 DNU = dqflags["DO_NOT_USE"]
 SAT = dqflags["SATURATED"]
 JUMP = dqflags["JUMP_DET"]
-
+CHARGE = dqflags["CHARGELOSS"]
 
 # -----------------------------------------------------------------------------
 #                           Test Suite
@@ -1459,6 +1461,141 @@ def test_compute_num_slices():
     assert compute_num_slices("21", n_rows, max_available_cores) == 9
 
 
+def variance_segments_data():
+    ramp_data = RampData()
+
+    ramp_data.instrument_name = "NIRISS"
+
+    ramp_data.frame_time = 10.73677
+    ramp_data.group_time = 10.73677
+    ramp_data.groupgap = 0
+    ramp_data.nframes = 1
+    ramp_data.drop_frames1 = None
+
+    ramp_data.flags_do_not_use = 1
+    ramp_data.flags_jump_det = 4
+    ramp_data.flags_saturated = 2
+    ramp_data.flags_no_gain_val = 524288
+    ramp_data.flags_unreliable_slope = 16777216
+
+    ramp_data.start_row = 0
+    ramp_data.num_rows = 1
+
+    ramp_data.suppress_one_group_ramps = True
+
+    (nints, ngroups, nrows, ncols) = (3, 10, 1, 1)
+    dims4 = (nints, ngroups, nrows, ncols)
+    dims2 = (nrows, ncols)
+
+    data = np.zeros(dims4, dtype=np.float32)
+    err  = np.zeros(dims4, dtype=np.float32)
+    gdq  = np.zeros(dims4, dtype=np.uint8)
+    pdq  = np.zeros(dims2, dtype=np.uint32)
+
+    zframe = None
+
+    ramp_data.data = data
+    ramp_data.err = err
+    ramp_data.groupdq = gdq
+    ramp_data.pixeldq = pdq
+    ramp_data.zeroframe = zframe
+
+    ngain   = np.zeros(dims2, dtype=np.float32)
+    nrnoise = np.zeros(dims2, dtype=np.float32)
+
+    flags = CHARGE | DNU
+
+    ramp_data.data[0, :, 0, 0] = np.array([-52.295128, -54.63902 , -43.85539 , -50.465115, -57.396935, -27.64135 , -42.559113, -40.520245, -38.349697, -19.900352])
+    ramp_data.data[1, :, 0, 0] = np.array([17.010073, 33.35443 , 42.739964, 32.19044 , 33.923347, 50.2099  , 38.141922, 21.525717, 36.277172, 23.702583])
+    ramp_data.data[2, :, 0, 0] = np.array([-7.3225894e+00, -4.9170280e+00, -1.4519103e+01,  5.3896809e-01, -5.5452089e+00, -5.6081324e+00,  1.7005712e+03,  1.6885978e+03,  1.6994796e+03,  1.7023866e+03])
+
+    ramp_data.err[0, :, 0, 0] = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+    ramp_data.err[1, :, 0, 0] = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+    ramp_data.err[2, :, 0, 0] = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+
+    # Integratin 0 has one 10 group segment
+    # Integratin 1 has two segments, a 5 group and a 2 group.  The 1 group segment is ignored.
+    # Integratin 2 has two segments, a 4 group and a 3 group.
+    # This can be checked by inspecting the output of remove_bad_singles in the utils.py
+    #     module, which is called from calc_slope_vars.
+    ramp_data.groupdq[0, :, 0, 0] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ramp_data.groupdq[1, :, 0, 0] = np.array([0, 0, 0, 0, 0, flags, 0, flags, 0, 0])
+    ramp_data.groupdq[2, :, 0, 0] = np.array([0, 0, 0, 0, flags, flags, flags, 0, 0, 0])
+
+    ramp_data.pixeldq[0, 0] = 0
+
+    ngain = np.zeros((1, 1), dtype=np.float32)
+    ngain[0, 0] = 1.6318602561950684
+
+    nrnoise = np.zeros((1, 1), dtype=np.float32)
+    nrnoise[0, 0] = 11.446370124816895
+
+    return ramp_data, ngain, nrnoise
+
+
+def test_variance_segments():
+    """
+    This tests the segmentation of a ramp for variance computations.  Examining the
+    output of the segment computation loop and the remove_bad_singles function results
+    in the following segments.  Note 1 and 0 group segments are removed from the
+    computations. 
+
+    [0] segs_beg_3 = [10  0  0  0] - loop computation
+    [0] segs_beg_3 = [10  0  0  0] - remove_bad_singles 
+    [1] segs_beg_3 = [5 1 2 0] - loop computation
+    [1] segs_beg_3 = [5 2 0 0] - remove_bad_singles 
+    [2] segs_beg_3 = [4 0 0 3] - loop computation
+    [2] segs_beg_3 = [4 3 0 0] - remove_bad_singles 
+    """
+    ramp, gain, rnoise = variance_segments_data()
+
+    algo, save_opt, ncores, bufsize = "OLS", False, "none", 1024 * 30000
+    slopes, cube, ols_opt, gls_opt = ramp_fit_data(
+        ramp, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
+    )
+
+    print_slopes(slopes)
+    print_integ(cube, pix=(0, 0))
+
+    tol = 1.0e-5
+
+    # Check slopes information
+    sdata, sdq, svp, svr, serr = slopes
+
+    check = np.array([[0.27167293]])
+    np.testing.assert_allclose(sdata, check, tol, tol)
+
+    check = np.array([[GOOD]])
+    np.testing.assert_allclose(sdq, check, tol, tol)
+
+    check = np.array([[0.00062286]])
+    np.testing.assert_allclose(svp, check, tol, tol)
+
+    check = np.array([[0.00568275]])
+    np.testing.assert_allclose(svr, check, tol, tol)
+
+    check = np.array([[0.07940786]])
+    np.testing.assert_allclose(serr, check, tol, tol)
+
+    # Check slopes information
+    cdata, cdq, cvp, cvr, cerr = cube
+
+    check = np.array([0.2685349 , 0.2891583 , 0.27793592], dtype=np.float32)
+    np.testing.assert_allclose(cdata[:, 0, 0], check, tol, tol)
+
+    check = np.array([GOOD, GOOD, GOOD], dtype=np.uint8)
+    np.testing.assert_allclose(cdq[:, 0, 0], check, tol, tol)
+
+    check = np.array([0.00131493, 0.00236688, 0.00236687], dtype=np.float32)
+    np.testing.assert_allclose(cvp[:, 0, 0], check, tol, tol)
+
+    check = np.array([0.00688818, 0.05412139, 0.08118208], dtype=np.float32)
+    np.testing.assert_allclose(cvr[:, 0, 0], check, tol, tol)
+
+    check = np.array([0.09057101, 0.2383853 , 0.28926572], dtype=np.float32)
+    np.testing.assert_allclose(cerr[:, 0, 0], check, tol, tol)
+
+
 # -----------------------------------------------------------------------------
 #                           Set up functions
 
@@ -1579,48 +1716,68 @@ def print_slopes(slopes):
     print(DELIM)
 
 
-def print_integ_data(integ_info):
+def print_integ_data(integ_info, pix=None):
     idata, idq, ivp, ivr, ierr = integ_info
+    if pix is not None:
+        row, col = pix
+        base_print("Integration data:", idata[:, row, col])
+        return
     base_print("Integration data:", idata)
 
 
-def print_integ_dq(integ_info):
+def print_integ_dq(integ_info, pix=None):
     idata, idq, ivp, ivr, ierr = integ_info
+    if pix is not None:
+        row, col = pix
+        base_print("Integration DQ:", idq[:, row, col])
+        return
     base_print("Integration DQ:", idq)
 
 
-def print_integ_poisson(integ_info):
+def print_integ_poisson(integ_info, pix=None):
     idata, idq, ivp, ivr, ierr = integ_info
+    if pix is not None:
+        row, col = pix
+        base_print("Integration Poisson:", ivp[:, row, col])
+        return
     base_print("Integration Poisson:", ivp)
 
 
-def print_integ_rnoise(integ_info):
+def print_integ_rnoise(integ_info, pix=None):
     idata, idq, ivp, ivr, ierr = integ_info
+    if pix is not None:
+        row, col = pix
+        base_print("Integration read noise:", ivr[:, row, col])
+        return
     base_print("Integration read noise:", ivr)
 
 
-def print_integ_err(integ_info):
+def print_integ_err(integ_info, pix=None):
     idata, idq, ivp, ivr, ierr = integ_info
+    if pix is not None:
+        row, col = pix
+        base_print("Integration err:", ierr[:, row, col])
+        return
     base_print("Integration err:", ierr)
 
 
-def print_integ(integ_info):
+def print_integ(integ_info, pix=None):
     print(DELIM)
     print("**** INTEGRATIONS")
     print(DELIM)
-    print_integ_data(integ_info)
+    print_integ_data(integ_info, pix)
 
     print(DELIM)
-    print_integ_dq(integ_info)
+    print_integ_dq(integ_info, pix)
 
     print(DELIM)
-    print_integ_poisson(integ_info)
+    print_integ_poisson(integ_info, pix)
 
     print(DELIM)
-    print_integ_rnoise(integ_info)
+    print_integ_rnoise(integ_info, pix)
 
     print(DELIM)
-    print_integ_err(integ_info)
+    print_integ_err(integ_info, pix)
 
     print(DELIM)
 
