@@ -541,13 +541,24 @@ def calc_slope_vars(ramp_data, rn_sect, gain_sect, gdq_sect, group_time, max_seg
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "invalid value.*", RuntimeWarning)
             wh_cr = np.where(gdq_2d_nan[group, :].astype(np.int32) & ramp_data.flags_jump_det > 0)
+            wh_dnu = np.where(gdq_2d_nan[group, :].astype(np.int32) & ramp_data.flags_do_not_use > 0)
 
         # ... but not on final read:
-        if len(wh_cr[0]) > 0 and (group < ngroups - 1):
+        if len(wh_dnu[0]) > 0 and (group < ngroups - 1):
+            # Where a DO_NOT_USE flag is found at the current group and there is
+            # a segment (i.e., a segment of length non-zero), then create a new
+            # segment.  Otherwise, no new segment is created.
+            for idx in wh_dnu[0]:
+                if segs[sr_index[idx], idx] > 0:
+                    sr_index[idx] += 1
+        elif len(wh_cr[0]) > 0 and (group < ngroups - 1):
+            # Where JUMP_DET is foud at the current group, createa a new segment
+            # and include the current group.
             sr_index[wh_cr[0]] += 1
             segs[sr_index[wh_cr], wh_cr] += 1
 
         del wh_cr
+        del wh_dnu
 
         # If current group is a NaN, this pixel is done (pix_not_done is False)
         wh_nan = np.where(np.isnan(gdq_2d_nan[group, :]))
@@ -1037,61 +1048,6 @@ def reset_bad_gain(ramp_data, pdq, gain):
 
 
 def remove_bad_singles(segs_beg_3):
-    """
-    For the current integration and data section, there may be segments of length
-    1 or zero that need to be removed from the segment list.  If there are segments
-    with length greater than 1, all segments of length 1 are removed.  If the longest
-    segment is of length 1, then all segments, except for the first, are removed.  By
-    construction, it is possible for the segment list to have segments of zero length,
-    which would be computed due to multiple DO_NOT_USE flags encountered.  This could
-    happen due to the CHARGELOSS flag occurring in the middle of a ramp.  This flag
-    also causes the DO_NOT_USE flag to be used as well.
-
-    Parameters
-    ----------
-    segs_beg_3 : ndarray
-        lengths of all segments for all ramps in the given data section and
-        integration; some of these ramps may contain segments having a single
-        group or zero groups, and another segment, 3-D int
-
-    Returns
-    -------
-    segs_beg_3 : ndarray
-        lengths of all segments for all ramps in the given data section and
-        integration; segments having a single group, and another segment
-        will be removed, 3-D int
-    """
-    # XXX - Probably a more performance way to do this.
-    max_seg, nrows, ncols = segs_beg_3.shape
-    if max_seg < 2:
-        return segs_beg_3
-    for row in range(nrows):
-        for col in range(ncols):
-            segs = segs_beg_3[:, row, col]
-            seg_max = segs.max()
-            if seg_max == 1:
-                new_segs = [1] + [0] * (max_seg-1)
-                segs_beg_3[:, row, col] = np.array(new_segs, dtype=segs_beg_3.dtype)
-                continue
-            seg_idx = 0
-            # Check all, but last segment
-            for k in range(len(segs)-1):
-                if segs[seg_idx] == 0 or segs[seg_idx] == 1:
-                    segs[seg_idx:-1] = segs[seg_idx+1:]
-                    segs[-1] = 0
-                    if segs[seg_idx+1:].max() == 0:
-                        break
-                else:
-                    seg_idx = seg_idx + 1
-
-            # Check last segment
-            if segs[-1] == 1:
-                segs[-1] = 0
-
-    return segs_beg_3
-
-
-def remove_bad_singles_old(segs_beg_3):
     """
     For the current integration and data section, remove all segments having only
     a single group if there are other segments in the ramp.  This method allows
