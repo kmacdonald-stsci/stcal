@@ -380,6 +380,8 @@ add_segment_to_list(struct segment_list * segs, npy_intp start, npy_intp end);
 static PyObject *
 build_opt_res(struct ramp_data * rd);
 
+/* XXX - Need clean_opt_res */
+
 static void
 clean_pixel_ramp(struct pixel_ramp * pr);
 
@@ -916,6 +918,15 @@ clean_ramp_data(
         }
     }
     SET_FREE(rd->segs);
+    SET_FREE(rd->pedestal);
+
+    /* XXX Maybe these need to be done. */
+    Py_XDECREF(rd->data);
+    Py_XDECREF(rd->groupdq);
+    Py_XDECREF(rd->err);
+    Py_XDECREF(rd->pixeldq);
+    Py_XDECREF(rd->zframe);
+    Py_XDECREF(rd->dcurrent);
 }
 
 /*
@@ -2181,6 +2192,7 @@ package_results(
     return result;
 
 FAILED_ALLOC:
+    /* XXX - maybe need to Py_XDECREF objects in objects. */
     Py_XDECREF(image_info);
     Py_XDECREF(cube_info);
     Py_XDECREF(opt_res);
@@ -2277,6 +2289,7 @@ py_ramp_data_get_float(
 
     Obj = PyObject_GetAttrString(rd, attr);
     val = (float)PyFloat_AsDouble(Obj);
+    Py_XDECREF(Obj);
 
     return val;
 }
@@ -2295,6 +2308,7 @@ py_ramp_data_get_int(
 
     Obj = PyObject_GetAttrString(rd, attr);
     val = (int)PyLong_AsLong(Obj);
+    Py_XDECREF(Obj);
 
     return val;
 }
