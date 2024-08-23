@@ -172,9 +172,6 @@ def ramp_fit(
     # data models.
     ramp_data = create_ramp_fit_class(model, dqflags, suppress_one_group)
 
-    if algorithm.upper() == "OLS_C":
-        ramp_data.run_c_code = True
-
     return ramp_fit_data(
         ramp_data, buffsize, save_opt, readnoise_2d, gain_2d, algorithm, weighting, max_cores, dqflags
     )
@@ -239,6 +236,9 @@ def ramp_fit_data(
         Object containing optional GLS-specific ramp fitting data for the
         exposure
     """
+    if algorithm.upper() == "OLS":
+        ramp_data.run_c_code = False
+
     if algorithm.upper() == "GLS":
         image_info, integ_info, gls_opt_info = gls_fit.gls_ramp_fit(
             ramp_data, buffsize, save_opt, readnoise_2d, gain_2d, max_cores
