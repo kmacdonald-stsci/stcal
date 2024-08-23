@@ -41,6 +41,8 @@ DNU = dqflags["DO_NOT_USE"]
 SAT = dqflags["SATURATED"]
 JUMP = dqflags["JUMP_DET"]
 
+OLS_DEFAULT = "OLS_C"
+
 
 # -----------------------------------------------------------------------------
 #                           Test Suite
@@ -61,7 +63,7 @@ def test_pix_0():
     dq = [GOOD] * ngroups
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -102,7 +104,7 @@ def test_pix_1():
     dq[4:] = [SAT] * (ngroups - 4)
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -135,7 +137,7 @@ def test_pix_2():
     dq = [GOOD, GOOD, GOOD, JUMP, GOOD, JUMP, GOOD, JUMP, SAT, SAT]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -178,7 +180,7 @@ def test_pix_3():
     dq[-2] = JUMP
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -220,7 +222,7 @@ def test_pix_4():
     dq = [GOOD] + [SAT] * (ngroups - 1)
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -303,7 +305,7 @@ def test_pix_5():
     dq[4] = JUMP
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -347,7 +349,7 @@ def test_pix_6():
     dq[3] = JUMP
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -388,7 +390,7 @@ def test_pix_7():
     dq = [GOOD] * (ngroups - 2) + [JUMP, JUMP]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -421,7 +423,7 @@ def test_pix_8():
     dq = [GOOD, JUMP, GOOD, GOOD, GOOD, GOOD, GOOD, SAT, SAT, SAT]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -455,7 +457,7 @@ def test_pix_9():
     dq = [GOOD, GOOD, JUMP, JUMP, GOOD, GOOD, GOOD, GOOD, JUMP, GOOD]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -498,7 +500,7 @@ def test_pix_10():
     dq = [GOOD, GOOD, JUMP, GOOD, GOOD, JUMP, GOOD, GOOD, GOOD, GOOD]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -539,7 +541,7 @@ def test_pix_11():
     dq = [GOOD, GOOD] + [SAT] * (ngroups - 2)
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -575,7 +577,7 @@ def test_pix_12():
     ramp_data.data[0, :, 0, 1] = np.array([61000.0, 61000.0], dtype=np.float32)
     ramp_data.groupdq[0, :, 0, 1] = np.array([SAT, SAT])
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -629,7 +631,7 @@ def test_miri_0():
     dq = [DNU] + [GOOD] * (ngroups - 2) + [DNU]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -663,7 +665,7 @@ def test_miri_1():
     dq = [DNU | JUMP] + [GOOD] * (ngroups - 2) + [DNU]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -697,7 +699,7 @@ def test_miri_2():
     dq = [DNU | JUMP] + [GOOD] * (ngroups - 2) + [DNU | JUMP]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
@@ -731,7 +733,7 @@ def test_miri_3():
     dq = [DNU] + [GOOD] * (ngroups - 2) + [DNU | JUMP]
     ramp_data.groupdq[0, :, 0, 0] = np.array(dq)
 
-    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, "OLS"
+    save_opt, ncores, bufsize, algo = True, "none", 1024 * 30000, OLS_DEFAULT
     slopes, cube, ols_opt, gls_opt = ramp_fit_data(
         ramp_data, bufsize, save_opt, rnoise, gain, algo, "optimal", ncores, dqflags
     )
