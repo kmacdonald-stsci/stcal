@@ -46,7 +46,6 @@ class RampData:
         # C code debugging switch.
         self.run_c_code = False
         self.run_chargeloss = True
-        # self.run_chargeloss = False
 
         self.one_groups_locs = None  # One good group locations.
         self.one_groups_time = None  # Time to use for one good group ramps.
@@ -129,7 +128,7 @@ class RampData:
         # May not be available for all pipelines, so is defaulted to NoneType.
         self.drop_frames1 = drop_frames1
 
-    def set_dqflags(self, dqflags):
+    def set_dqflags(self, dqflags, algorithm):
         """
         Set the data quality flags needed for ramp fitting.
 
@@ -144,7 +143,8 @@ class RampData:
         self.flags_saturated = dqflags["SATURATED"]
         self.flags_no_gain_val = dqflags["NO_GAIN_VALUE"]
         self.flags_unreliable_slope = dqflags["UNRELIABLE_SLOPE"]
-        self.flags_chargeloss = dqflags["CHARGELOSS"]
+        if algorithm == "OLS_C":
+            self.flags_chargeloss = dqflags["CHARGELOSS"]
 
     def dbg_print_types(self):
         # Arrays from the data model
