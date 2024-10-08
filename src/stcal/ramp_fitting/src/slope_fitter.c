@@ -76,7 +76,7 @@ const real_t LARGE_VARIANCE_THRESHOLD = 1.e6;
 /* ------------------------------------------------------------------------- */
 
 /* Formatting to make printing more uniform. */
-#define DBL "16.10f"
+#define DBL "10.3f"
 
 /* Is more general and non-type dependent. */
 #define BSWAP32(X) ((((X) & 0xff000000) >> 24) | \
@@ -142,6 +142,13 @@ const real_t LARGE_VARIANCE_THRESHOLD = 1.e6;
 #define dbg_ols_print_pixel(PR) \
     printf("[C:%d] Pixel (%ld, %ld)\n", __LINE__, (PR)->row, (PR)->col)
 
+#define dbg_pyerr(S) \
+    do { \
+        print_delim(); \
+        dbg_ols_print("%s\n", S); \
+        PyErr_Print(); \
+        print_delim(); \
+    } while(0)
 /* ------------------------------------------------------------------------- */
 
 /* ========================================================================= */
@@ -844,6 +851,14 @@ CLEANUP:
     FREE_RAMP_DATA(rd);
     FREE_PIXEL_RAMP(pr);
 
+    print_delim();
+    dbg_ols_print("Returning from the C extension and expecting good return\n");
+    print_delim();
+    PyErr_Print();
+    print_delim();
+    dbg_ols_print("Returning\n");
+    print_delim();
+
     return result;
 }
 
@@ -957,6 +972,7 @@ clean_pixel_ramp(
 
     /* Clean up the allocated memory for the linked lists. */
     FREE_SEGS_LIST(pr->nints, pr->segs);
+    // dbg_ols_print("Returning from '%s'\n", __FUNCTION__);
 }
 
 /* Cleans up the ramp data structure */
@@ -991,6 +1007,8 @@ clean_ramp_data(
     }
     SET_FREE(rd->segs);
     SET_FREE(rd->pedestal);
+
+    // dbg_ols_print("Returning from '%s'\n", __FUNCTION__);
 }
 
 /*
@@ -1750,7 +1768,7 @@ get_ramp_data(
         err_ols_print("%s\n", msg);
         goto END;
     }
-    
+
     if (get_ramp_data_parse(&Py_ramp_data, rd, args)) {
         FREE_RAMP_DATA(rd);
         goto END;
@@ -1826,11 +1844,20 @@ get_ramp_data_meta(
         PyObject * Py_ramp_data, /* The RampData class */
         struct ramp_data * rd)   /* The ramp data */
 {
+    PyObject * dframe = Py_None;
+
     /* Get integer meta data */
     rd->groupgap = py_ramp_data_get_int(Py_ramp_data, "groupgap");
     rd->nframes = py_ramp_data_get_int(Py_ramp_data, "nframes");
     rd->suppress1g = py_ramp_data_get_int(Py_ramp_data, "suppress_one_group_ramps");
-    rd->dropframes = py_ramp_data_get_int(Py_ramp_data, "drop_frames1");
+
+    /* XXX python 3.13 updates */
+    dframe = PyObject_GetAttrString(Py_ramp_data, "drop_frames1");
+    if (!dframe || (dframe == Py_None)) {
+        dbg_ols_print("drop_frames is NoneType, so not used\n");
+    } else {
+        rd->dropframes = py_ramp_data_get_int(Py_ramp_data, "drop_frames1");
+    }
 
     rd->ped_tmp = ((rd->nframes + 1) / 2. + rd->dropframes) / (rd->nframes + rd->groupgap);
 
@@ -1840,8 +1867,16 @@ get_ramp_data_meta(
     rd->sat = py_ramp_data_get_int(Py_ramp_data, "flags_saturated");
     rd->ngval = py_ramp_data_get_int(Py_ramp_data, "flags_no_gain_val");
     rd->uslope = py_ramp_data_get_int(Py_ramp_data, "flags_unreliable_slope");
-    rd->chargeloss = py_ramp_data_get_int(Py_ramp_data, "flags_chargeloss");
-    rd->run_chargeloss = py_ramp_data_get_int(Py_ramp_data, "run_chargeloss");
+
+    /* XXX python 3.13 updates */
+    if (rd->orig_gdq && (rd->orig_gdq != Py_None)) {
+        rd->chargeloss = py_ramp_data_get_int(Py_ramp_data, "flags_chargeloss");
+    } else {
+        // XXX Should anything be done here?
+    }
+
+    // rd->run_chargeloss = py_ramp_data_get_int(Py_ramp_data, "run_chargeloss");
+
     rd->invalid = rd->dnu | rd->sat;
 
     /* Get float meta data */
@@ -2242,19 +2277,25 @@ ols_slope_fit_pixels(
 {
     npy_intp row, col;
 
+    // dbg_ols_print("nrows = %ld, ncols = %ld\n", rd->nrows, rd->ncols);
+
     for (row = 0; row < rd->nrows; ++row) {
         for (col = 0; col < rd->ncols; ++col) {
 
             // dbg_ols_print("Running (%ld, %ld)\r", row, col);
+            // dbg_ols_print("Running (%ld, %ld)\n", row, col);
 
             get_pixel_ramp(pr, rd, row, col);
+
+            // print_pixel_ramp_info(rd, pr, __LINE__);
 
             /* Compute ramp fitting */
             if (ramp_fit_pixel(rd, pr)) {
                 return 1;
             }
 
-            if (rd->run_chargeloss) {
+            // if (rd->run_chargeloss) {
+            if (rd->orig_gdq != Py_None) {
                 if (ramp_fit_pixel_rnoise_chargeloss(rd, pr)) {
                     return 1;
                 }
@@ -2308,19 +2349,19 @@ package_results(
 
     image_info = Py_BuildValue("(NNNNN)", 
         rate->slope, rate->dq, rate->var_poisson, rate->var_rnoise, rate->var_err);
-    if (!image_info) {
+    if (!image_info || (image_info == Py_None)) {
         goto FAILED_ALLOC;
     }
 
     cube_info = Py_BuildValue("(NNNNN)", 
         rateints->slope, rateints->dq, rateints->var_poisson, rateints->var_rnoise, rateints->var_err);
-    if (!cube_info) {
+    if (!cube_info || (cube_info == Py_None)) {
         goto FAILED_ALLOC;
     }
 
     if (rd->save_opt) {
         opt_res = build_opt_res(rd);
-        if (!opt_res) {
+        if (!opt_res || (opt_res == Py_None)) {
             goto FAILED_ALLOC;
         }
     }
@@ -2445,6 +2486,7 @@ py_ramp_data_get_int(
 
     Obj = PyObject_GetAttrString(rd, attr);
     val = (int)PyLong_AsLong(Obj);
+
     Py_XDECREF(Obj);
 
     return val;
