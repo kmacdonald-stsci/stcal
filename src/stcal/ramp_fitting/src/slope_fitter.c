@@ -588,6 +588,9 @@ static int
 ramp_fit_pixel(struct ramp_data * rd, struct pixel_ramp * pr);
 
 static int
+ramp_fit_pixel_partial_sat(struct ramp_data * rd, struct pixel_ramp * pr);
+
+static int
 ramp_fit_pixel_rnoise_chargeloss(struct ramp_data * rd, struct pixel_ramp * pr);
 
 static double
@@ -1279,6 +1282,7 @@ compute_integration_segments(
         groupdq = pr->groupdq + integ * pr->ngroups;
     }
 
+    // XXX kmacdo - SAT handling for needs to be revisited
     /* If the whole integration is saturated, then no valid slope. */
     if ( (!chargeloss) && (groupdq[0] & rd->sat)) {
         pr->rateints[integ].dq |= rd->dnu;
@@ -2546,6 +2550,21 @@ ols_slope_fit_pixels(
             if (ramp_fit_pixel(rd, pr)) {
                 return 1;
             }
+            // XXX kmacdo - SAT handling for needs to be revisited
+            //     This is probably a good place to do this to do the
+            //     modifications desired for the partial SAT ramps.
+            //     Loop over each integration and use:
+            //         if 0 < pr->stats[integ].cnt_sat < pr->ngroups
+            //     Then the ramp is only partially saturated and you
+            //     can flag how you like and set the data values to
+            //     what you like. I suggest a new function to do that.
+            //
+            //     At this point, the SAT flag is set for fully saturated
+            //     ramps only. Therefore you can set the partially saturated
+            //     ramps here.
+            if (ramp_fit_pixel_partial_sat(rd, pr)) {
+                return 1;
+            }
 
             if (rd->orig_gdq != Py_None) {
                 if (ramp_fit_pixel_rnoise_chargeloss(rd, pr)) {
@@ -2840,6 +2859,34 @@ ramp_fit_pixel(
 END:
     return ret;
 }
+
+static int
+ramp_fit_pixel_partial_sat(
+        struct ramp_data * rd,  /* The ramp data */
+        struct pixel_ramp * pr) /* The pixel ramp data */
+{
+    npy_intp integ;
+    int partial_sat_found = 0;
+
+    for (integ = 0; integ < pr->nints; ++integ) {
+        if ((pr->stats[integ].cnt_sat > 0) &&
+            (pr->stats[integ].cnt_sat < pr->ngroups)) {
+            /* Partially saturated ramp found */
+            partial_sat_found = 1;
+            pr->rateints[integ].dq |= rd->sat;
+        }
+    }
+
+    // XXX Not sure if this is the desired behavior
+#if 0
+    if (partial_sat_found) {
+        pr->rate.dq |= rd->sat;
+    }
+#endif
+
+    return 0;
+}
+
 
 /*
  * Recompute read noise variance for ramps with the CHARGELOSS flag.
