@@ -609,7 +609,7 @@ def test_one_group_ramp_suppressed_one_integration():
     check = np.array([[[np.nan, np.nan, 1.0000001]]])
     np.testing.assert_allclose(cdata, check, tol)
 
-    check = np.array([[[DNU | SAT, DNU, GOOD]]])
+    check = np.array([[[DNU | SAT, DNU | SAT, GOOD]]])
     np.testing.assert_allclose(cdq, check, tol)
 
     check = np.array([[[0.0, 0.0, 0.25]]])
@@ -654,7 +654,7 @@ def test_one_group_ramp_not_suppressed_one_integration():
     check = np.array([[[np.nan, 1.0, 1.0000001]]])
     np.testing.assert_allclose(cdata, check, tol)
 
-    check = np.array([[[DNU | SAT, GOOD, GOOD]]])
+    check = np.array([[[DNU | SAT, SAT, GOOD]]])
     np.testing.assert_allclose(cdq, check, tol)
 
     check = np.array([[[0.0, 1, 0.25]]])
@@ -700,7 +700,7 @@ def test_one_group_ramp_suppressed_two_integrations():
     check = np.array([[[np.nan, np.nan, 1.0000001]], [[1.0000001, 1.0000001, 1.0000001]]])
     np.testing.assert_allclose(cdata, check, tol)
 
-    check = np.array([[[DNU | SAT, DNU, GOOD]], [[GOOD, GOOD, GOOD]]])
+    check = np.array([[[DNU | SAT, DNU | SAT, GOOD]], [[GOOD, GOOD, GOOD]]])
     np.testing.assert_allclose(cdq, check, tol)
 
     check = np.array([[[0.0, 0.0, 0.25]], [[0.125, 0.125, 0.25]]])
@@ -746,7 +746,7 @@ def test_one_group_ramp_not_suppressed_two_integrations():
     check = np.array([[[np.nan, 1.0, 1.0000001]], [[1.0000001, 1.0000001, 1.0000001]]])
     np.testing.assert_allclose(cdata, check, tol)
 
-    check = np.array([[[DNU | SAT, GOOD, GOOD]], [[GOOD, GOOD, GOOD]]])
+    check = np.array([[[DNU | SAT, SAT, GOOD]], [[GOOD, GOOD, GOOD]]])
     np.testing.assert_allclose(cdq, check, tol)
 
     check = np.array([[[0.0, 1.0, 0.25]], [[0.125, 0.25, 0.25]]])
@@ -881,7 +881,7 @@ def test_zeroframe():
     check = np.array([[[298.0626, np.nan, 652.01196]], [[18.62891, 18.62891, 18.62891]]])
     np.testing.assert_allclose(cdata, check, tol, tol)
 
-    check = np.array([[[GOOD, DNU | SAT, GOOD]], [[GOOD, GOOD, GOOD]]])
+    check = np.array([[[SAT, DNU | SAT, SAT]], [[GOOD, GOOD, GOOD]]])
     np.testing.assert_allclose(cdq, check, tol, tol)
 
     check = np.array([[[1.1799237, 0.0, 6.246655]], [[0.14749046, 0.00867591, 0.31233275]]])
@@ -1416,7 +1416,7 @@ def test_invalid_integrations():
     np.testing.assert_allclose(cdata[:, 0, 0], check, tol, tol)
 
     check = np.array(
-        [JUMP, JUMP | DNU, JUMP | DNU, GOOD, JUMP | DNU, JUMP | DNU, JUMP | DNU, JUMP | DNU], dtype=np.uint8
+        [JUMP | SAT, JUMP | DNU | SAT, JUMP | DNU | SAT, GOOD | SAT, JUMP | DNU | SAT, JUMP | DNU | SAT, JUMP | DNU | SAT, JUMP | DNU | SAT], dtype=np.uint8
     )
     np.testing.assert_allclose(cdq[:, 0, 0], check, tol, tol)
 
