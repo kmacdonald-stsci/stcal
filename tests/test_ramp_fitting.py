@@ -1323,7 +1323,7 @@ def test_new_saturation():
     check = np.array([[[2.7949152, 2.7956316, np.nan]], [[2.7956493, np.nan, np.nan]]])
     np.testing.assert_allclose(cdata, check, tol, tol)
 
-    check = np.array([[[GOOD, JUMP, DNU | SAT]], [[JUMP, DNU | SAT, DNU | SAT]]])
+    check = np.array([[[GOOD, JUMP | SAT, DNU | SAT]], [[JUMP | SAT, DNU | SAT, DNU | SAT]]])
     np.testing.assert_allclose(cdq, check, tol, tol)
 
     check = np.array([[[0.00054729, 0.00043342, 0.0]], [[0.00086654, 0.0, 0.0]]])

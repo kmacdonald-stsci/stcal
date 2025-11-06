@@ -599,6 +599,9 @@ py_ramp_data_get_int(PyObject * rd, const char * attr);
 static int
 ramp_fit_pixel(struct ramp_data * rd, struct pixel_ramp * pr);
 
+static int 
+ramp_fit_pixel_partial_sat(struct ramp_data * rd, struct pixel_ramp * pr);
+
 static int
 ramp_fit_pixel_rnoise_chargeloss(struct ramp_data * rd, struct pixel_ramp * pr);
 
@@ -2559,6 +2562,10 @@ ols_slope_fit_pixels(
                 return 1;
             }
 
+            if (ramp_fit_pixel_partial_sat(rd, pr)) {
+                return 1;
+            }
+
             if (rd->orig_gdq != Py_None) {
                 if (ramp_fit_pixel_rnoise_chargeloss(rd, pr)) {
                     return 1;
@@ -2851,6 +2858,33 @@ ramp_fit_pixel(
 
 END:
     return ret;
+}
+
+static int 
+ramp_fit_pixel_partial_sat(
+        struct ramp_data * rd,
+        struct pixel_ramp * pr)
+{
+    npy_intp integ;
+    int partial_sat_found = 0;
+
+    for (integ = 0; integ < pr->nints; ++integ) {
+        if ((pr->stats[integ].cnt_sat > 0) &&
+            (pr->stats[integ].cnt_sat < pr->ngroups)) {
+            /* Partially saturated ramp found */
+            partial_sat_found = 1;
+            pr->rateints[integ].dq |= rd->sat;
+        }
+    }
+
+    // XXX Not sure if this is the desired behavior
+#if 0
+    if (partial_sat_found) {
+        pr->rate.dq |= rd->sat;
+    }
+#endif
+
+    return 0;
 }
 
 /*
