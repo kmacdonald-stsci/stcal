@@ -2549,7 +2549,7 @@ ols_slope_fit_pixels(
             if (ramp_fit_pixel(rd, pr)) {
                 return 1;
             }
-            #if 0
+            #if 1
             if (ramp_fit_pixel_partial_sat(rd, pr)) {
                 return 1;
             }
@@ -2867,7 +2867,7 @@ ramp_fit_pixel_partial_sat(
     }
 
     // XXX Not sure if this is the desired behavior
-#if 0
+#if 1
     if (partial_sat_found) {
         pr->rate.dq |= rd->sat;
     }

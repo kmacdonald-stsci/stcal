@@ -210,8 +210,7 @@ def test_flagged_ramp():
 
     tol = 1.e-5
     np.testing.assert_allclose(data, data_ols, tol)
-    # XXX kmacdo - this will fail until the OLS is updated for the new SAT flagging.
-    # np.testing.assert_equal(dq, dq_ols)
+    np.testing.assert_equal(dq, dq_ols)
 
 
 def test_random_ramp():
