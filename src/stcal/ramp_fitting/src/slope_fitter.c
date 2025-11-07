@@ -1282,7 +1282,6 @@ compute_integration_segments(
         groupdq = pr->groupdq + integ * pr->ngroups;
     }
 
-    // XXX kmacdo - SAT handling for needs to be revisited
     /* If the whole integration is saturated, then no valid slope. */
     if ( (!chargeloss) && (groupdq[0] & rd->sat)) {
         pr->rateints[integ].dq |= rd->dnu;
@@ -2550,21 +2549,11 @@ ols_slope_fit_pixels(
             if (ramp_fit_pixel(rd, pr)) {
                 return 1;
             }
-            // XXX kmacdo - SAT handling for needs to be revisited
-            //     This is probably a good place to do this to do the
-            //     modifications desired for the partial SAT ramps.
-            //     Loop over each integration and use:
-            //         if 0 < pr->stats[integ].cnt_sat < pr->ngroups
-            //     Then the ramp is only partially saturated and you
-            //     can flag how you like and set the data values to
-            //     what you like. I suggest a new function to do that.
-            //
-            //     At this point, the SAT flag is set for fully saturated
-            //     ramps only. Therefore you can set the partially saturated
-            //     ramps here.
+            #if 0
             if (ramp_fit_pixel_partial_sat(rd, pr)) {
                 return 1;
             }
+            #endif
 
             if (rd->orig_gdq != Py_None) {
                 if (ramp_fit_pixel_rnoise_chargeloss(rd, pr)) {
