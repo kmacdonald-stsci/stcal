@@ -2549,11 +2549,11 @@ ols_slope_fit_pixels(
             if (ramp_fit_pixel(rd, pr)) {
                 return 1;
             }
-            #if 1
+
+            // Flag paritally saturated ramps
             if (ramp_fit_pixel_partial_sat(rd, pr)) {
                 return 1;
             }
-            #endif
 
             if (rd->orig_gdq != Py_None) {
                 if (ramp_fit_pixel_rnoise_chargeloss(rd, pr)) {
@@ -2857,6 +2857,7 @@ ramp_fit_pixel_partial_sat(
     npy_intp integ;
     int partial_sat_found = 0;
 
+    // For each ramp, flag partially saturated ramps
     for (integ = 0; integ < pr->nints; ++integ) {
         if ((pr->stats[integ].cnt_sat > 0) &&
             (pr->stats[integ].cnt_sat < pr->ngroups)) {
@@ -2866,12 +2867,9 @@ ramp_fit_pixel_partial_sat(
         }
     }
 
-    // XXX Not sure if this is the desired behavior
-#if 1
     if (partial_sat_found) {
         pr->rate.dq |= rd->sat;
     }
-#endif
 
     return 0;
 }
