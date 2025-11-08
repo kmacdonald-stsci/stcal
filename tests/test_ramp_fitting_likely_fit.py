@@ -206,7 +206,7 @@ def test_flagged_ramp():
     )
 
     data_ols = cube1[0][0, 0, 0]
-    dq_ols = cube1[1][0, 0, 0]  # Should have the SAT flag set.
+    dq_ols = cube1[1][0, 0, 0]
 
     tol = 1.e-5
     np.testing.assert_allclose(data, data_ols, tol)
