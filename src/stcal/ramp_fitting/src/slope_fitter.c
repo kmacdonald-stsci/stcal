@@ -588,9 +588,6 @@ static int
 ramp_fit_pixel(struct ramp_data * rd, struct pixel_ramp * pr);
 
 static int
-ramp_fit_pixel_partial_sat(struct ramp_data * rd, struct pixel_ramp * pr);
-
-static int
 ramp_fit_pixel_rnoise_chargeloss(struct ramp_data * rd, struct pixel_ramp * pr);
 
 static double
@@ -2550,11 +2547,6 @@ ols_slope_fit_pixels(
                 return 1;
             }
 
-            // Flag paritally saturated ramps
-            if (ramp_fit_pixel_partial_sat(rd, pr)) {
-                return 1;
-            }
-
             if (rd->orig_gdq != Py_None) {
                 if (ramp_fit_pixel_rnoise_chargeloss(rd, pr)) {
                     return 1;
@@ -2796,14 +2788,19 @@ ramp_fit_pixel(
             goto END;
         }
 
+        // XXX kmacdo: decide if this is the right way to handle DQ
         if (pr->rateints[integ].dq & rd->dnu) {
             dnu_cnt++;
             pr->rateints[integ].slope = NAN;
         }
+        // XXX kmacdo: maybe partial saturation flagging done after this
         if (pr->rateints[integ].dq & rd->sat) {
             sat_cnt++;
             pr->rateints[integ].slope = NAN;
         }
+        // XXX kmacdo: maybe partial saturation flagging done here
+        //             above declare and init partial_sat_flag = 0;
+        //             include partial_sat_flag = 1;
 
         if (rd->save_opt) {
             get_pixel_ramp_integration_segments_and_pedestal(integ, pr, rd);
@@ -2813,7 +2810,10 @@ ramp_fit_pixel(
     if (rd->nints == dnu_cnt) {
         pr->rate.dq |= rd->dnu;
     }
-    if (rd->nints == sat_cnt) {
+
+    // if (sat_cnt > 0) {
+    if (sat_cnt == rd->nints) {
+        // XXX kmacdo probably change this
         pr->rate.dq |= rd->sat;
     }
 
@@ -2832,12 +2832,15 @@ ramp_fit_pixel(
     }
     pr->rate.var_err = sqrt(pr->rate.var_poisson + pr->rate.var_rnoise);
 
+    // XXX - kmacdo: invalid includes sat right now, so mabye do partial
     if (pr->rate.dq & rd->invalid) {
         pr->rate.slope = NAN;
         pr->rate.var_poisson = 0.;
         pr->rate.var_rnoise = 0.;
         pr->rate.var_err = 0.;
     }
+
+    // XXX - kmacdo: do pixel level partial flagging here
 
     if (!isnan(pr->rate.slope)) {
         pr->rate.slope = pr->rate.slope / pr->invvar_e_sum;
@@ -2848,32 +2851,6 @@ ramp_fit_pixel(
 END:
     return ret;
 }
-
-static int
-ramp_fit_pixel_partial_sat(
-        struct ramp_data * rd,  /* The ramp data */
-        struct pixel_ramp * pr) /* The pixel ramp data */
-{
-    npy_intp integ;
-    int partial_sat_found = 0;
-
-    // For each ramp, flag partially saturated ramps
-    for (integ = 0; integ < pr->nints; ++integ) {
-        if ((pr->stats[integ].cnt_sat > 0) &&
-            (pr->stats[integ].cnt_sat < pr->ngroups)) {
-            /* Partially saturated ramp found */
-            partial_sat_found = 1;
-            pr->rateints[integ].dq |= rd->sat;
-        }
-    }
-
-    if (partial_sat_found) {
-        pr->rate.dq |= rd->sat;
-    }
-
-    return 0;
-}
-
 
 /*
  * Recompute read noise variance for ramps with the CHARGELOSS flag.
@@ -3021,12 +2998,21 @@ ramp_fit_pixel_integration(
         goto END;
     }
 
+    // Whole ramp not usable
     if (rd->ngroups == pr->stats[integ].cnt_dnu_sat) {
         pr->rateints[integ].dq |= rd->dnu;
         if (rd->ngroups == pr->stats[integ].cnt_sat) {
+            // XXX kmacdo - Sat gets set
             pr->rateints[integ].dq |= rd->sat;
         }
         return 0;
+    }
+
+    // XXX kmacdo - possibly set partial sat flag here
+    //              maybe move this to inside the function below
+    //              Done here may screw up other things
+    if (pr->stats[integ].cnt_sat > 0) {
+        pr->rateints[integ].dq |= rd->sat;
     }
 
     ramp_fit_pixel_integration_fit_slope(rd, pr, integ);
@@ -3109,6 +3095,10 @@ ramp_fit_pixel_integration_fit_slope(
         pr->rateints[integ].var_rnoise = 0.;
     }
 
+    // XXX kmacdo - this will muck things up for partial flagging.
+    //              maybe do partial flagging after this, but need
+    //              to check code flow and returns, to ensure partial
+    //              flagging is done correctly.
     if (pr->rateints[integ].dq & rd->invalid) {
         pr->rateints[integ].slope = NAN;
         pr->rateints[integ].var_poisson = 0.;
@@ -3124,6 +3114,8 @@ ramp_fit_pixel_integration_fit_slope(
             pr->rateints[integ].var_err = sqrt(var_err);
         }
     }
+
+    // XXX - kmacdo: possible location for partial saturation flagging
 
     // DBG_INTEG_INFO;  /* XXX */
 
