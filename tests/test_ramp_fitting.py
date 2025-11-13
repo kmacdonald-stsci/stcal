@@ -682,7 +682,7 @@ def test_one_group_ramp_suppressed_two_integrations():
     check = np.array([[1.0000001, 1.0000001, 1.0000001]])
     np.testing.assert_allclose(sdata, check, tol)
 
-    check = np.array([[GOOD, SAT, GOOD]])
+    check = np.array([[SAT, SAT, GOOD]])
     np.testing.assert_equal(sdq, check)
 
     check = np.array([[0.125, 0.125, 0.125]])
@@ -728,7 +728,7 @@ def test_one_group_ramp_not_suppressed_two_integrations():
     check = np.array([[1.0000001, 1.0000001, 1.0000001]])
     np.testing.assert_allclose(sdata, check, tol)
 
-    check = np.array([[GOOD, SAT, GOOD]])
+    check = np.array([[SAT, SAT, GOOD]])
     np.testing.assert_equal(sdq, check)
 
     check = np.array([[0.125, 0.2, 0.125]])
@@ -860,7 +860,7 @@ def test_zeroframe():
     check = np.array([[48.965397, 18.628912, 47.863224]])
     np.testing.assert_allclose(sdata, check, tol, tol)
 
-    check = np.array([[SAT, GOOD, SAT]])
+    check = np.array([[SAT, SAT, SAT]])
     np.testing.assert_equal(sdq, check)
 
     check = np.array([[0.13110262, 0.00867591, 0.29745975]])

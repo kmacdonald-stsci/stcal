@@ -2761,6 +2761,7 @@ ramp_fit_pixel(
     int ret = 0;
     npy_intp integ;
     int sat_cnt = 0, dnu_cnt = 0;
+    int set_rate_sat_flag = 0;
 
     /* Ramp fitting depends on the averaged median rate for each integration */
     if (compute_median_rate(rd, pr)) {
@@ -2801,6 +2802,15 @@ ramp_fit_pixel(
         // XXX kmacdo: maybe partial saturation flagging done here
         //             above declare and init partial_sat_flag = 0;
         //             include partial_sat_flag = 1;
+        //             If only partial flagging is wanted, with fully saturated
+        //             excluded, just add cnt_sat < rd->ngroups
+        // DO NOT SET PARTIAL SAT FLAG FOR THE PIXEL HERE
+        //     If rate.dq |= rd->sat, then this would invalidate valid
+        //     computations or the rate product.
+        if (pr->stats[integ].cnt_sat > 0) {
+            pr->rateints[integ].dq |= rd->sat;
+            set_rate_sat_flag = 1;
+        }
 
         if (rd->save_opt) {
             get_pixel_ramp_integration_segments_and_pedestal(integ, pr, rd);
@@ -2841,6 +2851,9 @@ ramp_fit_pixel(
     }
 
     // XXX - kmacdo: do pixel level partial flagging here
+    if (set_rate_sat_flag) {
+        pr->rate.dq |= rd->sat;
+    }
 
     if (!isnan(pr->rate.slope)) {
         pr->rate.slope = pr->rate.slope / pr->invvar_e_sum;
@@ -3006,13 +3019,6 @@ ramp_fit_pixel_integration(
             pr->rateints[integ].dq |= rd->sat;
         }
         return 0;
-    }
-
-    // XXX kmacdo - possibly set partial sat flag here
-    //              maybe move this to inside the function below
-    //              Done here may screw up other things
-    if (pr->stats[integ].cnt_sat > 0) {
-        pr->rateints[integ].dq |= rd->sat;
     }
 
     ramp_fit_pixel_integration_fit_slope(rd, pr, integ);
