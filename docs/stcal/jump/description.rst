@@ -51,7 +51,7 @@ pipeline.
 
 Method 3 is used if neither Methods 1 or 2 were selected, but there are a sufficient number
 of usable group differences in each integration (``min_diffs_single_pass`` is 10 by default)
-to find all outliers in a single calculation.  This is thus the default method used
+to find all outliers in a single calculation.  This is the default method used
 by the pipeline for most non-time-series observations in which ngroups is greater than 10.
 
 Method 4 is used if neither Methods 1 or 2 were selected, and there are too few usable
