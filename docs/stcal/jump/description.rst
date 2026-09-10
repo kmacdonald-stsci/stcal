@@ -99,8 +99,11 @@ The full iterative method described by `Anderson & Gordon (2011) <https://ui.ads
    to the larger one and if the larger one is above a threshold, it is flagged
    as a jump.
 
+
 Snowball Detection
 ^^^^^^^^^^^^^^^^^^
+
+.. _jump_snowball:
 
 To identify a snowball, use the algorithm below to find a contiguous block of newly
 saturated pixels, then compute an enclosing ellipse for the block of pixels. Refer
